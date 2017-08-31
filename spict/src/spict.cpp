@@ -115,6 +115,11 @@ Type objective_function<Type>::operator() ()
   DATA_SCALAR(omega);          // Period time of seasonal SDEs (2*pi = 1 year period)
   DATA_SCALAR(seasontype);     // Variable indicating whether to use 1=spline, 2=coupled SDEs
   DATA_SCALAR(efforttype);     // Variable indicating whether to use 1=spline, 2=coupled SDEs
+  DATA_VECTOR(seasonsP);        // A vector of length ns indicating to which season a state belongs
+  DATA_VECTOR(seasonindexP);    // A vector of length ns giving the number stepped within the current year
+  DATA_MATRIX(splinematP);      // Design matrix for the seasonal spline
+  DATA_MATRIX(splinematfineP);  // Design matrix for the seasonal spline on a fine time scale to get spline uncertainty
+  DATA_SCALAR(seasontypeP);     // Variable indicating whether to use 1=spline, 2=coupled SDEs
   DATA_INTEGER(timevaryinggrowth); //  Flag indicating whether REs are used for growth
   DATA_INTEGER(logmcovflag);   // Flag indicating whether covariate information is available
   DATA_VECTOR(ffacvec);        // Management factor each year multiply the predicted F with ffac
@@ -178,6 +183,7 @@ Type objective_function<Type>::operator() ()
   PARAMETER(logsdm);           // 
   PARAMETER(logpsi);           // Mean reversion in OU for logm
   PARAMETER_VECTOR(logphi);    // Season levels of F.
+  PARAMETER_VECTOR(logphiP);    // Season levels of Production.  
   PARAMETER(loglambda);        // Damping variable when using seasonal SDEs
   PARAMETER(logdelta);          // Strength of mean reversion in OU F process (delta = 0 mean RW)
   PARAMETER(logeta);           // Mean of OU F process
@@ -236,6 +242,18 @@ Type objective_function<Type>::operator() ()
   vector<Type> tempfine = splinematfine.col(0);
   vector<Type> seasonsplinefine(tempfine.size());
   seasonsplinefine = splinematfine * logphipar;
+
+  // NEW: seaonsal production
+  vector<Type> logphiparP(logphiP.size()+1);
+  logphiparP(0) = 0.0; // The first logphi is set to 0, the rest are estimated relative to this.
+  for(int i=1; i<logphiparP.size(); i++){ logphiparP(i) = logphiP(i-1); }
+  vector<Type> tempP = splinematP.col(0);
+  vector<Type> seasonsplineP(tempP.size());
+  seasonsplineP = splinematP * logphiparP;
+  vector<Type> tempfineP = splinematfineP.col(0);
+  vector<Type> seasonsplinefineP(tempfineP.size());
+  seasonsplinefineP = splinematfineP * logphiparP;
+
   Type pp = 1.0/(1.0 + exp(-logitpp));
   Type robfac = 1.0 + exp(logp1robfac);
   vector<Type> m(nm); 
@@ -684,6 +702,7 @@ Type objective_function<Type>::operator() ()
 	}
       }
     }
+    
     if(seasontype == 2.0){
       // Coupled SDEs
       for(int j=0; j<nsdu; j++){
@@ -724,9 +743,13 @@ Type objective_function<Type>::operator() ()
 	for(int i=0; i<ns; i++) logS(i) += logu(2*j, i); // Sum diffusion and seasonal component
       }
     }
+
+    
   } else {
     for(int i=0; i<ns; i++) logS(i) = -30; // If using simple set fishing mortality to something small.
   }
+
+  
   vector<Type> F = exp(logS + logF); // This is the fishing mortality used to calculate catch
   vector<Type> logFs = log(F);
 
@@ -757,6 +780,7 @@ Type objective_function<Type>::operator() ()
     std::cout << "--- DEBUG: B loop start --- ans: " << ans << std::endl;
   }
   vector<Type> logBpred(ns);
+  Type logSP = 0.0;  
   for(int i=0; i<(ns-1); i++){
     // To predict B(i) use dt(i-1), which is the time interval from t_i-1 to t_i
     if(simple==0){
@@ -769,6 +793,18 @@ Type objective_function<Type>::operator() ()
       logBpred(i+1) = log(Bpredtmp);
       logFs(i) = logobsC(i) - logB(i); // Calculate fishing mortality
     }
+
+    // NEW : Seasonal Production
+    // Seasonal component
+    if(seasontypeP == 1.0){
+      // Spline
+      int ind2P;
+      ind2P = CppAD::Integer(seasonindexP(i+1));
+      logSP += seasonsplineP(ind2P);
+    }
+    // update predicted Biomass
+    logBpred(i+1) += logSP;
+    
     likval = dnorm(logBpred(i+1), logB(i+1), sqrt(dt(i))*sdb, 1);
     ans-=likval;
     // DEBUGGING
@@ -776,6 +812,7 @@ Type objective_function<Type>::operator() ()
       std::cout << "-- i: " << i << " -   logB(i+1): " << logB(i+1) << "  logBpred(i+1): " << logBpred(i+1) << "  sdb: " << sdb << "  likval: " << likval << "  ans:" << ans << std::endl;
     }
   }
+    
   if(simple==1){ logFs(ns-1) = logFs(ns-2);}
 
   // CATCH PREDICTIONS
@@ -1040,6 +1077,7 @@ Type objective_function<Type>::operator() ()
   ADREPORT(logEmsy2);
   ADREPORT(logbkfrac);
   ADREPORT(seasonsplinefine);
+  ADREPORT(seasonsplinefineP);
   // PREDICTIONS
   ADREPORT(Cp);
   ADREPORT(logIp);
