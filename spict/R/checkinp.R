@@ -236,7 +236,7 @@ check.inp <- function(inp){
     }
     
     if (!any(c('obsI', 'obsE') %in% names(inp))){
-        stop('No effort or index observations. Please include index observations as a vector in inp$obsI and effort observations in inp$obsE.')
+        stop('Neither effort nor index observations. Please include either index observations as a vector in inp$obsI or effort observations in inp$obsE.')
     }
     
     # Check index observations
@@ -647,6 +647,40 @@ check.inp <- function(inp){
         inds <- which(modtime>=((i-1)*frac) & modtime<(i*frac))
         inp$seasons[inds] <- i
     }
+
+    ## Seasons for production
+    if (!"seasontypeP" %in% names(inp)) inp$seasontypeP <- 1
+    if (!"nseasonsP" %in% names(inp)){
+        inp$nseasonsP <- 1
+    }
+    if ("nseasonsP" %in% names(inp)){
+        if (!inp$nseasonsP %in% c(1, 2, 4)){
+            stop('inp$nseasonsP (=', inp$nseasonsP, ') must be either 1, 2 or 4.')
+        }
+    }
+
+    if (inp$nseasonsP == 1) inp$seasontypeP <- 0 # seasontypeP = 0 means seasons are disabled.
+    ## Calculate seasonal spline
+    if ("splineorderP" %in% names(inp)){
+        if (inp$nseasonsP < 4 & inp$splineorderP > 2){
+            inp$splineorderP <- 2
+        }
+    } else {
+        inp$splineorderP <- ifelse(inp$nseasonsP < 4, 2, 3)
+    }
+    inp$splinematP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=inp$dteuler)
+    inp$splinematfineP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=1/100)
+    inp$seasonindexP <- 1/inp$dteuler*(inp$time %% 1)
+    inp$seasonsP <- rep(0, inp$ns)
+    for (i in 1:inp$nseasonsP){
+        frac <- 1/inp$nseasonsP
+        modtime <- inp$time %% 1
+        inds <- which(modtime>=((i-1)*frac) & modtime<(i*frac))
+        inp$seasonsP[inds] <- i
+    }
+    if (!"logphiP" %in% names(inp$ini)) inp$ini$logphiP <- rep(0, inp$nseasonsP-1)
+
+    
     # ic is the indices of inp$time to which catch observations correspond
     if (length(inp$dtc) > 0){
         dtcpred <- min(inp$dtc)
@@ -1004,6 +1038,7 @@ check.inp <- function(inp){
                         logsdm=inp$ini$logsdm,
                         logpsi=inp$ini$logpsi,
                         logphi=inp$ini$logphi,
+                        logphiP=inp$ini$logphiP,
                         loglambda=inp$ini$loglambda,
                         logdelta=inp$ini$logdelta,
                         logeta=inp$ini$logeta,
