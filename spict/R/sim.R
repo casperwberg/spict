@@ -116,6 +116,7 @@ predict.logmre <- function(logmre0, dt, sdm, psi, logm){
 #' plot(sim2$obsC, typ='l')
 #' plot(sim2$obsI[[1]], typ='l')
 #' @export
+#'
 sim.spict <- function(input, nobs=100){
     # Check if input is a inp (initial values) or rep (results).
     use.effort.flag <- TRUE
@@ -262,6 +263,7 @@ sim.spict <- function(input, nobs=100){
     q <- exp(pl$logq)
     qf <- exp(pl$logqf)
     logphi <- pl$logphi
+    logphiP <- pl$logphiP
     sdb <- exp(pl$logsdb)
     sdu <- exp(pl$logsdu)
     sdf <- exp(pl$logsdf)
@@ -281,6 +283,10 @@ sim.spict <- function(input, nobs=100){
     if (inp$seasontype==1){ # Use spline to generate season
         seasonspline <- get.spline(pl$logphi, order=inp$splineorder, dtfine=dt)
         nseasonspline <- length(seasonspline)
+    }
+    if (inp$seasontypeP==1){ # Use spline to generate season
+        seasonsplineP <- get.spline(pl$logphiP, order=inp$splineorderP, dtfine=dt)
+        nseasonsplineP <- length(seasonsplineP)
     }
     flag <- TRUE
     recount <- 0
@@ -335,17 +341,24 @@ sim.spict <- function(input, nobs=100){
         #    mre <- exp(logmre) # To be used in mres below
         #}
         # - Biomass -
-        B <- numeric(nt)
-        B[1] <- B0
+        Bbase <- numeric(nt)
+        Bbase[1] <- B0
         e.b <- exp(rnorm(nt-1, 0, sdb*sqrt(dt)))
         for (t in 2:nt){
-            B[t] <- predict.b(B[t-1], F[t-1], gamma, m[inp$ir[t]], K, n, dt, sdb, inp$btype) * e.b[t-1]
+            Bbase[t] <- predict.b(Bbase[t-1], F[t-1], gamma, m[inp$ir[t]], K, n, dt, sdb, inp$btype) * e.b[t-1]
         }
-        flag <- any(B <= 0) # Negative biomass not allowed
+        flag <- any(Bbase <= 0) # Negative biomass not allowed
         recount <- recount+1
         if (recount > 10){
             stop('Having problems simulating data where B > 0, check parameter values!')
         }
+        
+        ## NEW: Impose seasons
+        seasonP <- numeric(length(Bbase))
+        if (inp$seasontypeP == 1){ # Spline-based seasonality
+            seasonP <- seasonsplineP[inp$seasonindexP+1]
+        }
+        B <- exp(log(Bbase) + seasonP)
     }
     if (any(B > 1e15)){
         warning('Some simulated biomass values are larger than 1e15.')
@@ -473,6 +486,7 @@ sim.spict <- function(input, nobs=100){
     sim$reportall <- inp$reportall
     sim$dteuler <- inp$dteuler
     sim$splineorder <- inp$splineorder
+    sim$splineorderP <- inp$splineorderP    
     sim$euler <- inp$euler
     sim$lamperti <- inp$lamperti
     sim$phases <- inp$phases
@@ -481,6 +495,8 @@ sim.spict <- function(input, nobs=100){
     sim$recount <- recount
     sim$nseasons <- inp$nseasons
     sim$seasontype <- inp$seasontype
+    sim$nseasonsP <- inp$nseasonsP
+    sim$seasontypeP <- inp$seasontypeP    
     sim$sim.comm.cpue <- inp$sim.comm.cpue
     sim$meyermillar <- inp$meyermillar
     sim$aspic <- inp$aspic
@@ -489,15 +505,18 @@ sim.spict <- function(input, nobs=100){
     sim$true$logbeta <- sim$true$logsdc - sim$true$logsdf
     sim$true$dteuler <- inp$dteuler
     sim$true$splineorder <- inp$splineorder
+    sim$true$splineorderP <- inp$splineorderP    
     sim$true$time <- time
     sim$true$C <- C
     sim$true$E <- E
     sim$true$I <- Itrue
-    sim$true$B <- B
+    sim$true$B <- Bbase
+    sim$true$Bs <- B
     sim$true$F <- exp(logFbase)
     sim$true$Fs <- F
     sim$true$gamma <- gamma
     sim$true$seasontype <- inp$seasontype
+    sim$true$seasontypeP <- inp$seasontypeP    
     sim$true$e.c <- e.c
     sim$true$e.e <- e.e
     sim$true$e.i <- e.i
