@@ -679,7 +679,6 @@ check.inp <- function(inp){
         inp$seasonsP[inds] <- i
     }
     if (!"logphiP" %in% names(inp$ini)) inp$ini$logphiP <- rep(0, inp$nseasonsP-1)
-
     
     # ic is the indices of inp$time to which catch observations correspond
     if (length(inp$dtc) > 0){
@@ -1212,6 +1211,11 @@ check.inp <- function(inp){
             forcefixpars <- c('logphi', forcefixpars)
         }
     }
+    ## NEW
+    if(inp$nseasonsP == 1){
+        forcefixpars <- c('logphiP', forcefixpars)
+    }
+    
     if (inp$robflagc == 0 & inp$robflagi == 0 & inp$robflage == 0){
         forcefixpars <- c('logitpp', 'logp1robfac', forcefixpars)
     }

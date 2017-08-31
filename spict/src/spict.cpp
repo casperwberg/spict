@@ -752,7 +752,20 @@ Type objective_function<Type>::operator() ()
     std::cout << "--- DEBUG: B loop start --- ans: " << ans << std::endl;
   }
   vector<Type> logBpred(ns);
-  Type logSP = 0.0;  
+  
+  // NEW : Seasonal Production
+  // Seasonal component  
+  vector<Type> logSP(ns);
+  for(int i=0; i<ns; i++) logSP(i) = 0.0; // Initialize
+  int ind2P;
+  if(seasontypeP == 1.0){
+    for(int i=0; i<ns; i++){  // start at 0 or 1?
+      // Spline
+      ind2P = CppAD::Integer(seasonindexP(i));
+      logSP(i) += seasonsplineP(ind2P);
+    }
+  }
+  
   for(int i=0; i<(ns-1); i++){
     // To predict B(i) use dt(i-1), which is the time interval from t_i-1 to t_i
     if(simple==0){
@@ -766,24 +779,24 @@ Type objective_function<Type>::operator() ()
       logFs(i) = logobsC(i) - logB(i); // Calculate fishing mortality
     }
 
-    // NEW : Seasonal Production
-    // Seasonal component
-    if(seasontypeP == 1.0){
-      // Spline
-      int ind2P;
-      ind2P = CppAD::Integer(seasonindexP(i+1));
-      logSP += seasonsplineP(ind2P);
-    }
     // update predicted Biomass
-    logBpred(i+1) += logSP;
+    logBpred(i+1) += 0; // logSP(i+1);
+
     
     likval = dnorm(logBpred(i+1), logB(i+1), sqrt(dt(i))*sdb, 1);
     ans-=likval;
+    
     // DEBUGGING
     if(dbg>1){
       std::cout << "-- i: " << i << " -   logB(i+1): " << logB(i+1) << "  logBpred(i+1): " << logBpred(i+1) << "  sdb: " << sdb << "  likval: " << likval << "  ans:" << ans << std::endl;
     }
   }
+
+if(simple==0){
+    if(dbg>0){
+    std::cout << " - seasonindexP: " << seasonindexP << " - logSP: " << logSP << " - logBpred: " << logBpred << " - ans: " << ans << std::endl;
+    }
+}
     
   if(simple==1){ logFs(ns-1) = logFs(ns-2);}
 
