@@ -756,10 +756,10 @@ Type objective_function<Type>::operator() ()
   // NEW : Seasonal Production
   // Seasonal component  
   vector<Type> logSP(ns);
-  for(int i=0; i<ns; i++) logSP(i) = 0.0; // Initialize
+  for(int i=1; i<ns; i++) logSP(i) = 0.0; // Initialize
   int ind2P;
   if(seasontypeP == 1.0){
-    for(int i=0; i<ns; i++){  // start at 0 or 1?
+    for(int i=1; i<ns; i++){  // QUESTION!!!!!!!!!!!!!!!!!!!!  start at 0 or 1?
       // Spline
       ind2P = CppAD::Integer(seasonindexP(i));
       logSP(i) += seasonsplineP(ind2P);
