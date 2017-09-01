@@ -352,13 +352,15 @@ sim.spict <- function(input, nobs=100){
         if (recount > 10){
             stop('Having problems simulating data where B > 0, check parameter values!')
         }
-        
+
         ## NEW: Impose seasons
-        seasonP <- numeric(length(Bbase))
+        seasonP <- numeric(nt)
         if (inp$seasontypeP == 1){ # Spline-based seasonality
             seasonP <- seasonsplineP[inp$seasonindexP+1]
         }
+        
         B <- exp(log(Bbase) + seasonP)
+        
     }
     if (any(B > 1e15)){
         warning('Some simulated biomass values are larger than 1e15.')
