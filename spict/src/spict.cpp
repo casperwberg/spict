@@ -780,11 +780,17 @@ Type objective_function<Type>::operator() ()
     }
 
     // update predicted Biomass
-    logBpred(i+1) += 0; // logSP(i+1);
+    logBpred(i+1) += logSP(i+1);
 
     
     likval = dnorm(logBpred(i+1), logB(i+1), sqrt(dt(i))*sdb, 1);
     ans-=likval;
+
+    
+    if(dbg>0.5){
+      std::cout << " -- i: " << i << " - logSP(i+1): " << logSP(i+1) << " - logBpred(i+1): " << logBpred(i+1) << "logB(i+1)" << logB(i+1) << "  likval: " << likval << " - ans: " << ans << std::endl;
+    }
+
     
     // DEBUGGING
     if(dbg>1){
@@ -792,11 +798,6 @@ Type objective_function<Type>::operator() ()
     }
   }
 
-if(simple==0){
-    if(dbg>0){
-    std::cout << " - seasonindexP: " << seasonindexP << " - logSP: " << logSP << " - logBpred: " << logBpred << " - ans: " << ans << std::endl;
-    }
-}
     
   if(simple==1){ logFs(ns-1) = logFs(ns-2);}
 
