@@ -352,6 +352,8 @@ sim.spict <- function(input, nobs=100){
         ## mean of msea (log scale) should be 0, so that the estimation of the reference levels is
         ## not biased
 
+        print(inp$seasonindex)
+        
         if(inp$seasontypeP == 0){
             m <- mbase
         }

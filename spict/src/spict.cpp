@@ -107,11 +107,11 @@ Type objective_function<Type>::operator() ()
   DATA_SCALAR(omega);          // Period time of seasonal SDEs (2*pi = 1 year period)
   DATA_SCALAR(seasontype);     // Variable indicating whether to use 1=spline, 2=coupled SDEs
   DATA_SCALAR(efforttype);     // Variable indicating whether to use 1=spline, 2=coupled SDEs
-  DATA_VECTOR(seasonsP);        // A vector of length ns indicating to which season a state belongs
-  DATA_VECTOR(seasonindexP);    // A vector of length ns giving the number stepped within the current year
-  DATA_MATRIX(splinematP);      // Design matrix for the seasonal spline
-  DATA_MATRIX(splinematfineP);  // Design matrix for the seasonal spline on a fine time scale to get spline uncertainty
-  DATA_SCALAR(seasontypeP);     // Variable indicating whether to use 1=spline, 2=coupled SDEs
+  // DATA_VECTOR(seasonsP);        // A vector of length ns indicating to which season a state belongs
+  // DATA_VECTOR(seasonindexP);    // A vector of length ns giving the number stepped within the current year
+  // DATA_MATRIX(splinematP);      // Design matrix for the seasonal spline
+  // DATA_MATRIX(splinematfineP);  // Design matrix for the seasonal spline on a fine time scale to get spline uncertainty
+  // DATA_SCALAR(seasontypeP);     // Variable indicating whether to use 1=spline, 2=coupled SDEs
   DATA_INTEGER(timevaryinggrowth); //  Flag indicating whether REs are used for growth
   DATA_INTEGER(logmcovflag);   // Flag indicating whether covariate information is available
   DATA_VECTOR(ffacvec);        // Management factor each year multiply the predicted F with ffac
@@ -123,6 +123,7 @@ Type objective_function<Type>::operator() ()
   DATA_INTEGER(stochmsy);      // Use stochastic msy?
   DATA_INTEGER(stabilise);     // If 1 stabilise optimisation using uninformative priors
   //DATA_SCALAR(effortflag);     // If effortflag == 1 use effort data, else use index data
+  DATA_FACTOR(timevaryingm);            // factor for time varying m
 
   // Priors
   DATA_VECTOR(priorn);         // Prior vector for n, [log(mean), stdev in log, useflag]
@@ -184,6 +185,9 @@ Type objective_function<Type>::operator() ()
   PARAMETER_MATRIX(logu);      // Seasonal component of F in log
   PARAMETER_VECTOR(logB);      // Biomass in log
   PARAMETER_VECTOR(logmre);    // Random effect on m
+  PARAMETER_VECTOR(SARvec);    // Autoregressive deviations to seasonal spline
+  PARAMETER(logitSARphi);      // AR coefficient for seasonal spline dev
+  PARAMETER(logSdSAR);         // Standard deviation seasonal spline deivations
 
   //std::cout << "expmosc: " << expmosc(lambda, omega, 0.1) << std::endl;
    if(dbg > 0){
@@ -230,17 +234,6 @@ Type objective_function<Type>::operator() ()
   vector<Type> tempfine = splinematfine.col(0);
   vector<Type> seasonsplinefine(tempfine.size());
   seasonsplinefine = splinematfine * logphipar;
-
-  // NEW: seaonsal production
-  vector<Type> logphiparP(logphiP.size()+1);
-  logphiparP(0) = 0.0; // The first logphi is set to 0, the rest are estimated relative to this.
-  for(int i=1; i<logphiparP.size(); i++){ logphiparP(i) = logphiP(i-1); }
-  vector<Type> tempP = splinematP.col(0);
-  vector<Type> seasonsplineP(tempP.size());
-  seasonsplineP = splinematP * logphiparP;
-  vector<Type> tempfineP = splinematfineP.col(0);
-  vector<Type> seasonsplinefineP(tempfineP.size());
-  seasonsplinefineP = splinematfineP * logphiparP;
 
   Type pp = 1.0/(1.0 + exp(-logitpp));
   Type robfac = 1.0 + exp(logp1robfac);
@@ -289,6 +282,8 @@ Type objective_function<Type>::operator() ()
   Type isdc2 = 1.0/sdc2;
   Type beta = sdc/sdf(0);
   Type logbeta = log(beta);
+  Type SARphi = ilogit(logitSARphi);
+  Type sdSAR = exp(logsdSAR);
 
   // Initialise vectors
   vector<Type> P(ns-1);
@@ -305,7 +300,7 @@ Type objective_function<Type>::operator() ()
   // Covariate for m
   vector<Type> logmc(ns);
   for(int i=0; i < ns; i++){
-    logmc(i) = logm(0) + mu*logmcov(i);
+    logmc(i) = logm(timevaryingm[i]) + mu*logmcov(i);
   }
 
   // Reference points
@@ -747,24 +742,79 @@ Type objective_function<Type>::operator() ()
     }
   }
 
+
+
+  // NEW: September 2017 Tobias
+  // Seasonal m - seasonal production
+  // NEW : Seasonal Production
+  // Seasonal component  
+  vector<Type> logmsea(ns);
+  vector<Type> logmvec = log(mvec);
+  
+  for(int i=1; i<ns; i++) logmsea(i) = 0.0; // Initialize
+  int ind2P;
+  if(seasontypeP == 1.0){     // stepwise approximation
+    for(int i=0; i<ns; i++){  
+
+      vector<Type> seaFact = logphiP;
+
+      // correct estimation of seaFact = factor with length 1/dteuler and repeating logphiP values
+      
+      ind2P = CppAD::Integer(seasonindex(i));
+      logmsea(i) += seaFact(ind2P);
+      logmvec(i) += logmsea(i);
+
+      // add constraints on sum 0
+      
+    }
+  }
+  if(seasontypeP == 2.0){    // splines
+    for(int i=0; i<ns; i++){
+      vector<Type> logphiparP(logphiP.size()+1);
+      logphiparP(0) = 0.0; // The first logphi is set to 0, the rest are estimated relative to this.
+      for(int i=1; i<logphiparP.size(); i++){ logphiparP(i) = logphiP(i-1); }
+      vector<Type> tempP = splinematP.col(0);
+      vector<Type> seasonsplineP(tempP.size());
+      seasonsplineP = splinematP * logphiparP;
+      vector<Type> tempfineP = splinematfineP.col(0);
+      vector<Type> seasonsplinefineP(tempfineP.size());
+      seasonsplinefineP = splinematfineP * logphiparP;      
+
+      ind2P = CppAD::Integer(seasonindexP(i));
+      logmsea(i) += seasonsplineP(ind2P);
+      logmvec(i) += logmsea(i);
+
+
+      // add constraints on closing circle and sum 0
+
+  //AR
+  using namespace density;
+  ARk_t<Type> nldens(phi);
+  f += SCALE(nldens, sigmaV)(vector<Type>(V));
+
+  
+      
+  for(int i=1; i<S.size(); i++) f-= dnorm(S(i),S(i-1),Type(1),true); // RW
+  f-=dnorm(S(0),S(S.size()-1),Type(1),true); // circular
+  f-=dnorm( sum(S), Type(0), Type(1e-4), true); //sum zero constraint
+
+
+  
+      
+    }    
+  }
+  if(seasontype == 3.0){
+    // not implemented yet (sinusoidal function)
+  }
+
+  mvec = exp(logmvec);
+  
+
   // BIOMASS PREDICTIONS
   if(dbg>0){
     std::cout << "--- DEBUG: B loop start --- ans: " << ans << std::endl;
   }
   vector<Type> logBpred(ns);
-  
-  // NEW : Seasonal Production
-  // Seasonal component  
-  vector<Type> logSP(ns);
-  for(int i=1; i<ns; i++) logSP(i) = 0.0; // Initialize
-  int ind2P;
-  if(seasontypeP == 1.0){
-    for(int i=1; i<ns; i++){  // QUESTION!!!!!!!!!!!!!!!!!!!!  start at 0 or 1?
-      // Spline
-      ind2P = CppAD::Integer(seasonindexP(i));
-      logSP(i) += seasonsplineP(ind2P);
-    }
-  }
   
   for(int i=0; i<(ns-1); i++){
     // To predict B(i) use dt(i-1), which is the time interval from t_i-1 to t_i
@@ -778,10 +828,6 @@ Type objective_function<Type>::operator() ()
       logBpred(i+1) = log(Bpredtmp);
       logFs(i) = logobsC(i) - logB(i); // Calculate fishing mortality
     }
-
-    // update predicted Biomass
-    logBpred(i+1) += logSP(i+1);
-
     
     likval = dnorm(logBpred(i+1), logB(i+1), sqrt(dt(i))*sdb, 1);
     ans-=likval;
