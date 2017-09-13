@@ -445,7 +445,7 @@ check.inp <- function(inp){
         inp$msytype <- 's'
     } else {
         if (!inp$msytype %in% c('s', 'd')){
-            stop('inp$msytype must be either "s" (stochastic) or "d" (deterministic!')
+            stop('inp$msytype must be either "s" (stochastic) or "d" (deterministic)!')
         }
     }
 
@@ -453,6 +453,10 @@ check.inp <- function(inp){
     timeobsall <- sort(c(inp$timeC, inp$timeC + inp$dtc,
                          unlist(inp$timeI),
                          inp$timeE, inp$timeE + inp$dte))
+
+    ## total number of years
+    inp$nyears <- max(timeobsall) - min(timeobsall) - 1
+    
     # Catch prediction time step (dtpredc)
     if (!"dtpredc" %in% names(inp)){
         if (length(inp$dtc)>0){
@@ -648,9 +652,10 @@ check.inp <- function(inp){
         inp$seasons[inds] <- i
     }
 
-    ## Seasons for production
-    if (!"seasontypeP" %in% names(inp)) inp$seasontypeP <- 1
-    if (!"nseasonsP" %in% names(inp)){
+    ####### NEW: September 2017 Tobias
+    ## Seasons for production (m)
+    if (!"seasontypeP" %in% names(inp)) inp$seasontypeP <- 1  ## default seasontype = 1
+    if (!"nseasonsP" %in% names(inp)){      ## default number of seasons = 1
         inp$nseasonsP <- 1
     }
     if ("nseasonsP" %in% names(inp)){
@@ -658,27 +663,44 @@ check.inp <- function(inp){
             stop('inp$nseasonsP (=', inp$nseasonsP, ') must be either 1, 2 or 4.')
         }
     }
-
     if (inp$nseasonsP == 1) inp$seasontypeP <- 0 # seasontypeP = 0 means seasons are disabled.
-    ## Calculate seasonal spline
-    if ("splineorderP" %in% names(inp)){
-        if (inp$nseasonsP < 4 & inp$splineorderP > 2){
-            inp$splineorderP <- 2
-        }
-    } else {
-        inp$splineorderP <- ifelse(inp$nseasonsP < 4, 2, 3)
+
+    if(inp$seasontypeP == 1){   ## stepwise approximation of seasonal pattern in m
+        if (!"logphiP" %in% names(inp$ini)) stop("For stepwise approximation of seasonal production, you have to provide 'inp$ini$logphi'")
+        if(length(inp$ini$logphiP) != inp$nseasonsP) stop("For stepwise approximation of seasonal production, 'inp$ini$logphiP' should have the same length as 'inp$nseasonsP'")
+        inp$seasonsP <- rep(0, inp$ns)
+        for (i in 1:inp$nseasonsP){
+             frac <- 1/inp$nseasonsP
+             modtime <- inp$time %% 1
+             inds <- which(modtime>=((i-1)*frac) & modtime<(i*frac))
+             inp$seasonsP[inds] <- i
+         }        
     }
-    inp$splinematP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=inp$dteuler)
-    inp$splinematfineP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=1/100)
-    inp$seasonindexP <- 1/inp$dteuler*(inp$time %% 1)
-    inp$seasonsP <- rep(0, inp$ns)
-    for (i in 1:inp$nseasonsP){
-        frac <- 1/inp$nseasonsP
-        modtime <- inp$time %% 1
-        inds <- which(modtime>=((i-1)*frac) & modtime<(i*frac))
-        inp$seasonsP[inds] <- i
+    if(inp$seasontypeP == 2){   ## normalised spline function for seasonal pattern in m
+         if ("splineorderP" %in% names(inp)){
+             if (inp$nseasonsP < 4 & inp$splineorderP > 2){
+                 inp$splineorderP <- 2
+             }
+         } else {
+             inp$splineorderP <- ifelse(inp$nseasonsP < 4, 2, 3)
+         }
+         inp$splinematP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=inp$dteuler)
+         inp$splinematfineP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=1/100)
+         inp$seasonindexP <- 1/inp$dteuler*(inp$time %% 1)
+         inp$seasonsP <- rep(0, inp$ns)
+         for (i in 1:inp$nseasonsP){
+             frac <- 1/inp$nseasonsP
+             modtime <- inp$time %% 1
+             inds <- which(modtime>=((i-1)*frac) & modtime<(i*frac))
+             inp$seasonsP[inds] <- i
+         }
     }
-    if (!"logphiP" %in% names(inp$ini)) inp$ini$logphiP <- rep(0, inp$nseasonsP-1)
+    if(inp$seasontypeP == 3){   ## sinusoidal function for seasonal pattern in m
+        ## still to be implemented
+    }
+    if (!"logphiP" %in% names(inp$ini)) inp$ini$logphiP <- rep(0, inp$nseasonsP-1)    
+    
+
     
     # ic is the indices of inp$time to which catch observations correspond
     if (length(inp$dtc) > 0){
@@ -858,6 +880,8 @@ check.inp <- function(inp){
         #    inp$ini$logr <- log(-r)
         #}
     }
+
+    
     if ('logr' %in% names(inp$ini)){
         nr <- length(inp$ini$logr)
         if (!'ir' %in% names(inp) | nr == 1){
@@ -900,7 +924,7 @@ check.inp <- function(inp){
             }
         }
     }
-
+    
     check.mapped.ini <- function(inp, nam, nnam){
         if (nam %in% names(inp$ini)){
             if (length(inp$ini[[nam]]) != inp[[nnam]]){ # nq is given by mapq
