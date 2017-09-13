@@ -256,7 +256,7 @@ sim.spict <- function(input, nobs=100){
     } else {
         F0 <- 0.2*exp(inp$ini$logr)
     }
-    m <- exp(pl$logm)
+    mbase <- exp(pl$logm)
     n <- exp(pl$logn)
     gamma <- calc.gamma(n)
     K <- exp(pl$logK)
@@ -284,10 +284,7 @@ sim.spict <- function(input, nobs=100){
         seasonspline <- get.spline(pl$logphi, order=inp$splineorder, dtfine=dt)
         nseasonspline <- length(seasonspline)
     }
-    if (inp$seasontypeP==1){ # Use spline to generate season
-        seasonsplineP <- get.spline(pl$logphiP, order=inp$splineorderP, dtfine=dt)
-        nseasonsplineP <- length(seasonsplineP)
-    }
+    
     flag <- TRUE
     recount <- 0
     while(flag){
@@ -325,6 +322,9 @@ sim.spict <- function(input, nobs=100){
             }
         }
         F <- exp(logFbase + season)
+
+
+        
         # - Growth (time-varying via RW) -
         # Always run this even when timevaryinggrowth == FALSE to obtain same random numbers
         #e.m <- matrix(0, inp$nstocks, nt-1)
@@ -339,28 +339,57 @@ sim.spict <- function(input, nobs=100){
         #}
         #if (inp$timevaryinggrowth){
         #    mre <- exp(logmre) # To be used in mres below
-        #}
+                                        #}
+
+
+
+        ###### NEW: September 2017 Tobias
+        ## seasonal m for seasonal production
+        ## make inp$ir in check.inp dependent on logr and seasonal r
+        ## making m seasonal means making r and K seasonal, but for estimation of Bmsyd,
+        ## K is used which will not have a seasonal effect
+        ## logm and mbase = without seasonal pattern -> for reference levels
+        ## mean of msea (log scale) should be 0, so that the estimation of the reference levels is
+        ## not biased
+
+        if(inp$seasontypeP == 0){
+            m <- mbase
+        }
+        if(inp$seasontypeP == 1){
+            seaFact <- pl$logphiP - mean(pl$logphiP)
+            msea <- seaFact[inp$seasonsP]
+            ## this closes circle, better assuming that logphiP has same length as nseasons no??
+            m <- exp(log(mbase) + msea)
+            inp$ir <- seq(length(msea))   ## hack! and will intervene with timevaryinggrowth!
+        }
+        if(inp$seasontypeP == 2){
+            seaFact <- pl$logphiP - mean(pl$logphiP)            
+            seasonsplineP <- get.spline(pl$logphiP, order=inp$splineorderP, dtfine=dt)
+            nseasonsplineP <- length(seasonsplineP)
+            msea <- seasonsplineP[inp$seasonindexP+1]
+            ## so far this does not sum to 1
+            m <- exp(log(mbase) + msea)
+            inp$ir <- seq(length(msea))   ## hack! and will intervene with timevaryinggrowth!            
+        }
+        if(inp$seasontypeP == 3){
+            ## still to be implemented
+            m <- mbase
+        }
+        
+
         # - Biomass -
-        Bbase <- numeric(nt)
-        Bbase[1] <- B0
+        B <- numeric(nt)
+        B[1] <- B0
         e.b <- exp(rnorm(nt-1, 0, sdb*sqrt(dt)))
         for (t in 2:nt){
-            Bbase[t] <- predict.b(Bbase[t-1], F[t-1], gamma, m[inp$ir[t]], K, n, dt, sdb, inp$btype) * e.b[t-1]
+            B[t] <- predict.b(B[t-1], F[t-1], gamma, m[inp$ir[t]], K, n, dt, sdb, inp$btype) * e.b[t-1]
         }
-        flag <- any(Bbase <= 0) # Negative biomass not allowed
+        flag <- any(B <= 0) # Negative biomass not allowed
         recount <- recount+1
         if (recount > 10){
             stop('Having problems simulating data where B > 0, check parameter values!')
         }
 
-        ## NEW: Impose seasons
-        seasonP <- numeric(nt)
-        if (inp$seasontypeP == 1){ # Spline-based seasonality
-            seasonP <- seasonsplineP[inp$seasonindexP+1]
-        }
-        
-        B <- exp(log(Bbase) + seasonP)
-        
     }
     if (any(B > 1e15)){
         warning('Some simulated biomass values are larger than 1e15.')
@@ -512,8 +541,7 @@ sim.spict <- function(input, nobs=100){
     sim$true$C <- C
     sim$true$E <- E
     sim$true$I <- Itrue
-    sim$true$B <- Bbase
-    sim$true$Bs <- B
+    sim$true$B <- B
     sim$true$F <- exp(logFbase)
     sim$true$Fs <- F
     sim$true$gamma <- gamma
@@ -526,15 +554,15 @@ sim.spict <- function(input, nobs=100){
     sim$true$e.f <- e.f
     
     sign <- 1
-    R <- (n-1)/n * gamma * mean(m[inp$ir]) / K
+    R <- (n-1)/n * gamma * mean(mbase[inp$ir]) / K
     p <- n-1
     sim$true$R <- R
-    sim$true$logrold <- log(abs(gamma * mean(m[inp$ir]) / K))
-    sim$true$logr <- log(mean(m[inp$ir]) / K * n^(n/(n-1.0)))
+    sim$true$logrold <- log(abs(gamma * mean(mbase[inp$ir]) / K))
+    sim$true$logr <- log(mean(mbase[inp$ir]) / K * n^(n/(n-1.0)))
     sim$true$logrc <- log(2 * R)
     # Deterministic reference points
     sim$true$Bmsyd <- K/(n^(1/(n-1)))
-    sim$true$MSYd <- mean(m[inp$ir])
+    sim$true$MSYd <- mean(mbase[inp$ir])
     sim$true$Fmsyd <- sim$true$MSYd/sim$true$Bmsyd
     # Stochastic reference points from Bordet & Rivest (2014)
     sim$true$Bmsys <- K/(p+1)^(1/p) * (1- (1+R*(p-1)/2)/(R*(2-R)^2)*sdb^2)
