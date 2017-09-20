@@ -1856,35 +1856,49 @@ plotspict.seasonP <- function(rep, stamp=get.version()){
         inds <- which(colnames(rep$cov.fixed) == 'logphiP')
         ssf <- get.par('seasonsplinefineP', rep)
         covmat <- rep$cov.fixed[inds, inds]
-        seasonsplineestP <- get.spline(logphiP[, 2], order=rep$inp$splineorderP, dtfine=rep$inp$dteuler)
-        test <- seq(0, 1, length=length(seasonsplineestP))
-        yest <- exp(meanlogB + seasonsplineestP)
-        seasonsplinesmooP <-  ssf[, 2]
-        sssl <- exp(meanlogB + ssf[, 1])
-        sssu <- exp(meanlogB + ssf[, 3])
-        nsss <- length(seasonsplinesmooP)
-        t <- seq(0, 1, length=nsss)
-        y <- exp(meanlogB + seasonsplinesmooP)
-        ylim <- range(yest, y)
+        if(rep$inp$seasontypeP==1){
+            y <- exp(logphiP[, 2])
+            t <- seq(0,1, length=length(logphiP[,2]))
+            yest <- y
+            test <- t
+        }
+        if (rep$inp$seasontypeP==2){
+            seasonsplineestP <- get.spline(logphiP[, 2], order=rep$inp$splineorderP, dtfine=rep$inp$dteuler)
+            test <- seq(0, 1, length=length(seasonsplineestP))
+            yest <- exp(meanlogB + seasonsplineestP)
+            seasonsplinesmooP <-  ssf[, 2]
+            sssl <- exp(meanlogB + ssf[, 1])
+            sssu <- exp(meanlogB + ssf[, 3])
+            nsss <- length(seasonsplinesmooP)
+            t <- seq(0, 1, length=nsss)
+            y <- exp(meanlogB + seasonsplinesmooP)            
+        }
+        ylim <- range(yest, y, na.rm=TRUE)
         if (!naflag){
             ylim <- range(c(ylim,sssl, sssu))
         }                
 
         if ("true" %in% names(rep$inp)){
-            if (rep$inp$true$seasontypeP==1){
+            if(rep$inp$true$seasontypeP==1){
+                seaFact <- rep(rep$inp$true$logphiP, each = rep$inp$nseasonsP)
+                ttrue <- seq(0,1, length=length(seaFact))
+                ytrue <- exp(seaFact) - mean(exp(seaFact)) + 1
+                ylim <- range(c(ylim,ytrue))
+            }
+            if (rep$inp$true$seasontypeP==2){
                 seasonsplinetrueP <- get.spline(rep$inp$true$logphiP, order=rep$inp$true$splineorderP,
                                                dtfine=rep$inp$true$dteuler)
                 ttrue <- seq(0, 1, length=length(seasonsplinetrueP))
-                ytrue <- exp(seasonsplinetrueP) # Don't add mean F
+                ytrue <- exp(seasonsplinetrueP) - mean(exp(seasonsplinetrueP)) + 1
                 ylim <- range(c(ylim, ytrue))
             
             }
-        }        
+        }
         plot(t, y, typ='n', xaxt='n', xlab='Time of year', ylab='Seasonal spline',
              main=paste('Spline order:',rep$inp$splineorderP), ylim=ylim)
         cicol2 <- rgb(0, 0, 1, 0.1)
         cicol3 <- rgb(0, 0, 1, 0.2)
-        polygon(c(t, rev(t)), c(sssl, rev(sssu)), col=cicol2, border=cicol2)
+        if(rep$inp$seasontypeP==2) polygon(c(t, rev(t)), c(sssl, rev(sssu)), col=cicol2, border=cicol2)
         if (!naflag){
             lines(t, sssl, col=cicol3)
             lines(t, sssu, col=cicol3)
@@ -1897,10 +1911,10 @@ plotspict.seasonP <- function(rep, stamp=get.version()){
             ats2 <- pretty(c(sssl, sssu, ytrue))
         }
         abline(h=ats2, lty=3, col='lightgray')
-        lines(t, y, lwd=1, col='green')
+        if(rep$inp$seasontypeP==2) lines(t, y, lwd=1, col='green')
         lines(test, yest, lwd=1.5, col=4, typ='s')
         if ("true" %in% names(rep$inp)){
-            if (rep$inp$true$seasontypeP==1){
+            if (rep$inp$true$seasontypeP %in% c(1,2)){
                 lines(ttrue, ytrue, lwd=1, col=true.col(), typ='s')
             }
         }
@@ -1912,13 +1926,6 @@ plotspict.seasonP <- function(rep, stamp=get.version()){
         txt.stamp(stamp)
     }
 }
-
-
-
-
-
-
-
 
 
 

@@ -352,26 +352,26 @@ sim.spict <- function(input, nobs=100){
         ## mean of msea (log scale) should be 0, so that the estimation of the reference levels is
         ## not biased
 
-        print(inp$seasonindex)
-        
         if(inp$seasontypeP == 0){
             m <- mbase
         }
         if(inp$seasontypeP == 1){
-            seaFact <- pl$logphiP - mean(pl$logphiP)
+            seaFact <- exp(pl$logphiP)
+            seaFact <- seaFact - mean(seaFact) + 1   ## normalise to mean 1 (if time series stops in middle of year, can be different from 1)
             msea <- seaFact[inp$seasonsP]
-            ## this closes circle, better assuming that logphiP has same length as nseasons no??
-            m <- exp(log(mbase) + msea)
-            inp$ir <- seq(length(msea))   ## hack! and will intervene with timevaryinggrowth!
+            print(mean(msea))
+            m <- mbase * msea
+            ## inp$ir <- seq(length(msea))   ## hack! and will intervene with timevaryinggrowth!
         }
         if(inp$seasontypeP == 2){
-            seaFact <- pl$logphiP - mean(pl$logphiP)            
-            seasonsplineP <- get.spline(pl$logphiP, order=inp$splineorderP, dtfine=dt)
+            seaFact <- pl$logphiP ## - mean(pl$logphiP)  ## normalise to mean 0
+            seasonsplineP <- get.spline(seaFact, order=inp$splineorderP, dtfine=dt)
+            seasonsplineP <- exp(seasonsplineP) - mean(exp(seasonsplineP)) + 1
             nseasonsplineP <- length(seasonsplineP)
             msea <- seasonsplineP[inp$seasonindexP+1]
-            ## so far this does not sum to 1
-            m <- exp(log(mbase) + msea)
-            inp$ir <- seq(length(msea))   ## hack! and will intervene with timevaryinggrowth!            
+            print(mean(msea))
+            m <- mbase * msea
+            ## inp$ir <- seq(length(msea))   ## hack! and will intervene with timevaryinggrowth!            
         }
         if(inp$seasontypeP == 3){
             ## still to be implemented
@@ -384,7 +384,7 @@ sim.spict <- function(input, nobs=100){
         B[1] <- B0
         e.b <- exp(rnorm(nt-1, 0, sdb*sqrt(dt)))
         for (t in 2:nt){
-            B[t] <- predict.b(B[t-1], F[t-1], gamma, m[inp$ir[t]], K, n, dt, sdb, inp$btype) * e.b[t-1]
+            B[t] <- predict.b(B[t-1], F[t-1], gamma, m[t-1], K, n, dt, sdb, inp$btype) * e.b[t-1]   ## before here inp$ir[t] for m
         }
         flag <- any(B <= 0) # Negative biomass not allowed
         recount <- recount+1
