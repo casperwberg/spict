@@ -766,7 +766,7 @@ Type objective_function<Type>::operator() ()
   vector<Type> logmvec = log(mvec);
   for(int i=1; i<ns; i++) logmsea(i) = 0.0; // Initialize
   int ind2P;
-  
+
   if(seasontypeP == 1.0){     // stepwise approximation
     // vector with repeating logphiP values
     int dtE;
