@@ -674,7 +674,14 @@ check.inp <- function(inp){
              modtime <- inp$time %% 1
              inds <- which(modtime>=((i-1)*frac) & modtime<(i*frac))
              inp$seasonsP[inds] <- i
-         }        
+        }
+        ## can not be NULL
+        inp$splineorderP <- inp$nseasonsP - 1
+        inp$seasonindexP <- 1/inp$dteuler*(inp$time %% 1)
+        inp$splinematP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=inp$dteuler)
+        inp$splinematfineP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=1/100)
+        print(inp$splinematP)
+        
     }
     if(inp$seasontypeP == 2){   ## normalised spline function for seasonal pattern in m
          if ("splineorderP" %in% names(inp)){
