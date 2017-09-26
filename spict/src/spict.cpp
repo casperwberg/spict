@@ -383,7 +383,7 @@ Type objective_function<Type>::operator() ()
       likval = dnorm(seasonsplineP(i), seasonsplineP(i-1), Type(1), true);
       ans -= likval;
 
-      std::cout << "-- i: " << i << " -  likval: " << likval << "  ans:" << ans << std::endl;
+      //      std::cout << "-- i: " << i << " -  likval: " << likval << "  ans:" << ans << std::endl;
 
     }
 
@@ -395,7 +395,7 @@ Type objective_function<Type>::operator() ()
     likval = dnorm(seasonsplineP(0),seasonsplineP(seasonsplineP.size()-1),Type(1),true);
     ans -= likval;
 
-    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
+    //    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
 
     
     // add constraint on mean 0
@@ -408,7 +408,7 @@ Type objective_function<Type>::operator() ()
     //  ARk_t<Type> nldens(phi);
     //  f += SCALE(nldens, sigmaV)(vector<Type>(V));
 
-    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
+    //    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
  
   }
   if(seasontypeP == 3.0){

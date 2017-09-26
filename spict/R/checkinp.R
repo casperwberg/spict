@@ -680,7 +680,6 @@ check.inp <- function(inp){
         inp$seasonindexP <- 1/inp$dteuler*(inp$time %% 1)
         inp$splinematP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=inp$dteuler)
         inp$splinematfineP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=1/100)
-        print(inp$splinematP)
         
     }
     if(inp$seasontypeP == 2){   ## normalised spline function for seasonal pattern in m
