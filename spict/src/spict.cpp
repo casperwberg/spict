@@ -338,6 +338,18 @@ Type objective_function<Type>::operator() ()
       ind2P = CppAD::Integer(seasonindex(i));
       logmsea(i) += seaFact(ind2P);
     }
+
+    for(int i=1; i<logphiP.size(); i++){
+      likval = dnorm(logphiP(i),logphiP(i-1),Type(1),true); // RW
+      ans -= likval;
+      std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;      
+    }
+
+    likval = dnorm(logphiP(0),logphiP(logphiP.size()-1),Type(1),true); // circular
+    ans -= likval;
+
+    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
+    
     // add constraint on mean 0
     likval = dnorm(sum(logphiP), Type(0), Type(1e-4), true);   // or seaFact
     ans -= likval;
