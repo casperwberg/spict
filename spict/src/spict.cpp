@@ -342,13 +342,13 @@ Type objective_function<Type>::operator() ()
     for(int i=1; i<logphiP.size(); i++){
       likval = dnorm(logphiP(i),logphiP(i-1),Type(1),true); // RW
       ans -= likval;
-      std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;      
+      //  std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;      
     }
 
     likval = dnorm(logphiP(0),logphiP(logphiP.size()-1),Type(1),true); // circular
     ans -= likval;
 
-    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
+    //    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
     
     // add constraint on mean 0
     likval = dnorm(sum(logphiP), Type(0), Type(1e-4), true);   // or seaFact
@@ -356,7 +356,7 @@ Type objective_function<Type>::operator() ()
     // closing not required for stepwise approximation
     // no random walk    
 
-    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
+    //    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
 
     
   }  
