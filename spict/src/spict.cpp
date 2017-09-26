@@ -320,8 +320,6 @@ Type objective_function<Type>::operator() ()
 
   Type likval;  
 
-  
-
   if(seasontypeP == 1.0){   // stepwise approximation
     // vector with repeating logphiP values
     int dtE;
@@ -329,14 +327,11 @@ Type objective_function<Type>::operator() ()
     vector<Type> seaFact(dtE);
     int phiSize = logphiP.size();
     int repeatFac = dtE/phiSize;
-    std::cout << "-- phiSize: " << phiSize << " -  dtE: " << dtE << std::endl;
     int indSP = 0;
     for(int i=0; i<phiSize; i++){
       for(int j=0; j<repeatFac; j++){
        seaFact(indSP) = logphiP(i);
        indSP += 1;
-
-       std::cout << "-- indSP: " << indSP << " -  j: " << j << std::endl;       
        }
     }    
     for(int i=0; i<ns; i++){  
@@ -344,7 +339,7 @@ Type objective_function<Type>::operator() ()
       logmsea(i) += seaFact(ind2P);
     }
     // add constraint on mean 0
-    likval = dnorm(sum(seaFact), Type(0), Type(1e-4), true);
+    likval = dnorm(sum(logphiP), Type(0), Type(1e-4), true);   // or seaFact
     ans -= likval;
     // closing not required for stepwise approximation
     // no random walk    
@@ -376,9 +371,8 @@ Type objective_function<Type>::operator() ()
       likval = dnorm(seasonsplineP(i), seasonsplineP(i-1), Type(1), true);
       ans -= likval;
 
-      if(dbg>0){
-	std::cout << "-- i: " << i << " -  likval: " << likval << "  ans:" << ans << std::endl;
-      }      
+      std::cout << "-- i: " << i << " -  likval: " << likval << "  ans:" << ans << std::endl;
+
     }
 
     if(dbg>0){
@@ -389,9 +383,8 @@ Type objective_function<Type>::operator() ()
     likval = dnorm(seasonsplineP(0),seasonsplineP(seasonsplineP.size()-1),Type(1),true);
     ans -= likval;
 
-    if(dbg>0){
-      std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
-    }
+    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
+
     
     // add constraint on mean 0
     likval = dnorm(sum(seasonsplineP), Type(0), Type(1e-4), true);
@@ -403,9 +396,8 @@ Type objective_function<Type>::operator() ()
     //  ARk_t<Type> nldens(phi);
     //  f += SCALE(nldens, sigmaV)(vector<Type>(V));
 
-    if(dbg>0){
-      std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
-    }
+    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
+ 
   }
   if(seasontypeP == 3.0){
     // not implemented yet (sinusoidal function)
@@ -843,7 +835,6 @@ Type objective_function<Type>::operator() ()
   
   vector<Type> F = exp(logS + logF); // This is the fishing mortality used to calculate catch
   vector<Type> logFs = log(F);
-
 
   // GROWTH RATE (modelled as time-varying m)
   if (timevaryinggrowth == 1){
