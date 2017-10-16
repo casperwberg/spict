@@ -10,7 +10,8 @@ License: GPL (>=3)
 Copyright: Martin Waever Pedersen <mawp@dtu.dk>
 Depends:
     R (>= 3.0),
-    TMB
+    TMB,
+    RcppEigen
 LinkingTo: TMB, RcppEigen
 Suggests:
     ellipse,
@@ -24,5 +25,5 @@ Suggests:
 LazyData: true
 VignetteBuilder: knitr
 GithubRepo: spict
-GithubRef: master 
-GithubSHA1: cec74e0d64908e3a676b856a64f90d6fb191fa53 
+GithubRef: seaSurplusProd 
+GithubSHA1: c162139c4c1dd5d899a04c2a0c64f05a5194eefa 
