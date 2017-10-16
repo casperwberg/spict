@@ -186,7 +186,6 @@ Type objective_function<Type>::operator() ()
   PARAMETER(logsdm);           // 
   PARAMETER(logpsi);           // Mean reversion in OU for logm
   PARAMETER_VECTOR(logphi);    // Season levels of F.
-  PARAMETER_VECTOR(logphiP);    // Season levels of Production.  
   PARAMETER(loglambda);        // Damping variable when using seasonal SDEs
   PARAMETER(logdelta);          // Strength of mean reversion in OU F process (delta = 0 mean RW)
   PARAMETER(logeta);           // Mean of OU F process
