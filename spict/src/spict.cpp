@@ -308,8 +308,26 @@ Type objective_function<Type>::operator() ()
 
   
   // placeholder for ADREPORT
-  //  vector<Type> seasonsplinefineP(ns);    
-  //  for(int i=0; i<ns; i++) sesonsplinefineP(i) = 0.0; // Initialize  
+  // vector<Type> seasonsplinefineP(ns);    
+  // for(int i=0; i<ns; i++) sesonsplinefineP(i) = 0.0; // Initialize
+  vector<Type> logphiparP;   // logphiparP only used for seasontypeP == 2  
+  if(seasontypeP == 1.0){
+      logphiparP = logphiP;
+  }
+  if(seasontypeP == 2.0){
+
+    logphiparP.resize(logphiP.size()+1);
+      logphiparP(0) = 0.0; // The first logphi is set to 0, the rest are estimated relative to this.
+      for(int i=1; i<logphiparP.size(); i++){ logphiparP(i) = logphiP(i-1); }      
+
+//    logphiparP = logphiP;
+  }  
+  vector<Type> tempP = splinematP.col(0);    
+  vector<Type> seasonsplineP(tempP.size());
+  seasonsplineP = splinematP * logphiparP;
+  vector<Type> tempfineP = splinematfineP.col(0);
+  vector<Type> seasonsplinefineP(tempfineP.size());
+  seasonsplinefineP = splinematfineP * logphiparP;     
 
   
   vector<Type> logmc(ns);
@@ -339,15 +357,19 @@ Type objective_function<Type>::operator() ()
       logmsea(i) += seaFact(ind2P);
     }
 
+
     for(int i=1; i<logphiP.size(); i++){
       likval = dnorm(logphiP(i),logphiP(i-1),Type(1),true); // RW
       ans -= likval;
       //  std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;      
     }
 
+
+    /*
     likval = dnorm(logphiP(0),logphiP(logphiP.size()-1),Type(1),true); // circular
     ans -= likval;
-
+    */
+    
     //    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
     
     // add constraint on mean 0
@@ -363,15 +385,15 @@ Type objective_function<Type>::operator() ()
   if(seasontypeP == 2.0){    // splines
 
     //  vector<Type> logmvec = log(mvec);
-    vector<Type> logphiparP(logphiP.size()+1);   // logphiparP only used for seasontypeP == 2
-    logphiparP(0) = 0.0; // The first logphi is set to 0, the rest are estimated relative to this.
-    for(int i=1; i<logphiparP.size(); i++){ logphiparP(i) = logphiP(i-1); }
-    vector<Type> tempP = splinematP.col(0);    
-    vector<Type> seasonsplineP(tempP.size());
-    seasonsplineP = splinematP * logphiparP;
-    vector<Type> tempfineP = splinematfineP.col(0);
-    vector<Type> seasonsplinefineP(tempfineP.size());
-    seasonsplinefineP = splinematfineP * logphiparP;   
+//     vector<Type> logphiparP(logphiP.size()+1);   // logphiparP only used for seasontypeP == 2
+//     logphiparP(0) = 0.0; // The first logphi is set to 0, the rest are estimated relative to this.
+//     for(int i=1; i<logphiparP.size(); i++){ logphiparP(i) = logphiP(i-1); }
+//     vector<Type> tempP = splinematP.col(0);    
+//     vector<Type> seasonsplineP(tempP.size());
+//     seasonsplineP = splinematP * logphiparP;
+//     vector<Type> tempfineP = splinematfineP.col(0);
+//     vector<Type> seasonsplinefineP(tempfineP.size());
+//     seasonsplinefineP = splinematfineP * logphiparP;   
 
   
     for(int i=0; i<ns; i++){
@@ -379,22 +401,23 @@ Type objective_function<Type>::operator() ()
       logmsea(i) += seasonsplineP(ind2P);
     }
     // random walk
-    for(int i=1; i<seasonsplineP.size(); i++){
+        for(int i=1; i<seasonsplineP.size(); i++){
       likval = dnorm(seasonsplineP(i), seasonsplineP(i-1), Type(1), true);
       ans -= likval;
-
+    
       //      std::cout << "-- i: " << i << " -  likval: " << likval << "  ans:" << ans << std::endl;
 
     }
-
+    
     if(dbg>0){
       std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
     }
-    
+
+    /*
     // add constraint on closing circle    
     likval = dnorm(seasonsplineP(0),seasonsplineP(seasonsplineP.size()-1),Type(1),true);
     ans -= likval;
-
+    */
     //    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
 
     
@@ -411,9 +434,9 @@ Type objective_function<Type>::operator() ()
     //    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
  
   }
-  if(seasontypeP == 3.0){
+  // if(seasontypeP == 3.0){
     // not implemented yet (sinusoidal function)
-  }
+  // }
 
 
 
@@ -1157,7 +1180,8 @@ Type objective_function<Type>::operator() ()
   ADREPORT(logEmsy2);
   ADREPORT(logbkfrac);
   ADREPORT(seasonsplinefine);
-  //  if(seasontypeP == 2.0)  ADREPORT(seasonsplinefineP);
+  // if(seasontypeP == 2.0)
+  ADREPORT(seasonsplinefineP);
   // PREDICTIONS
   ADREPORT(Cp);
   ADREPORT(logIp);
