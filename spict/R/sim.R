@@ -365,12 +365,15 @@ sim.spict <- function(input, nobs=100){
         }
         if(inp$seasontypeP == 2){
             seaFact <- pl$logphiP ## - mean(pl$logphiP)  ## normalise to mean 0
-            seasonsplineP <- get.spline(seaFact, order=inp$splineorderP, dtfine=dt)
-            seasonsplineP <- exp(seasonsplineP) - mean(exp(seasonsplineP)) + 1
-            nseasonsplineP <- length(seasonsplineP)
-            msea <- seasonsplineP[inp$seasonindexP+1]
-            print(mean(msea))
+            seasonsplineP <- get.splineP(seaFact, order=inp$splineorderP, dtfine=dt)
+            expseasonsplineP <- exp(seasonsplineP)
+            print(paste0("expseasonsplineP:  ",expseasonsplineP))
+            normexpseasonsplineP <- expseasonsplineP - mean(expseasonsplineP) + 1
+            nseasonsplineP <- length(normexpseasonsplineP)
+            msea <- normexpseasonsplineP[inp$seasonindexP+1]
+            ## print(mean(msea))
             m <- mbase * msea
+            print(paste0("mbase:  ",mbase))            
             ## inp$ir <- seq(length(msea))   ## hack! and will intervene with timevaryinggrowth!            
         }
         if(inp$seasontypeP == 3){

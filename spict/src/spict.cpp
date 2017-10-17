@@ -318,25 +318,13 @@ Type objective_function<Type>::operator() ()
   // placeholder for ADREPORT
   // vector<Type> seasonsplinefineP(ns);    
   // for(int i=0; i<ns; i++) sesonsplinefineP(i) = 0.0; // Initialize
-  vector<Type> logphiparP;   // logphiparP only used for seasontypeP == 2  
-  if(seasontypeP == 1.0){
-      logphiparP = logphiP;
-	  
-  }
-  if(seasontypeP == 2.0){
-
-    logphiparP.resize(logphiP.size()+1);
-      logphiparP(0) = 0.0; // The first logphi is set to 0, the rest are estimated relative to this.
-      for(int i=1; i<logphiparP.size(); i++){ logphiparP(i) = logphiP(i-1); }      
-
-//    logphiparP = logphiP;
-  }  
   vector<Type> tempP = splinematP.col(0);    
   vector<Type> seasonsplineP(tempP.size());
-  seasonsplineP = splinematP * logphiparP;
+  seasonsplineP = splinematP * logphiP;
+  vector<Type> expseasonsplineP = exp(seasonsplineP);
   vector<Type> tempfineP = splinematfineP.col(0);
   vector<Type> seasonsplinefineP(tempfineP.size());
-  seasonsplinefineP = splinematfineP * logphiparP;     
+  seasonsplinefineP = splinematfineP * logphiP;     
   
   vector<Type> logmc(ns);
   vector<Type> mvec(ns);
@@ -344,6 +332,7 @@ Type objective_function<Type>::operator() ()
   for(int i=0; i<ns; i++) logmsea(i) = 0.0; // Initialize
   int ind2P;
 
+  
   Type likval;  
 
   if(seasontypeP == 1.0){   // stepwise approximation
@@ -365,23 +354,9 @@ Type objective_function<Type>::operator() ()
       logmsea(i) += seaFact(ind2P);
     }
 
-
-    for(int i=1; i<logphiP.size(); i++){
-      likval = dnorm(logphiP(i),logphiP(i-1),Type(1),true); // RW
-      ans -= likval;
-      //  std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;      
-    }
-
-
-    /*
-    likval = dnorm(logphiP(0),logphiP(logphiP.size()-1),Type(1),true); // circular
-    ans -= likval;
-    */
     
-    //    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
-    
-    // add constraint on mean 0
-    likval = dnorm(sum(logphiP), Type(0), Type(1e-4), true);   // or seaFact
+    // add constraint on mean 1
+    likval = dnorm(sum(exp(logphiP))/logphiP.size(), Type(1), Type(1e-4), true);   // or seaFact
     ans -= likval;
     // closing not required for stepwise approximation
     // no random walk    
@@ -392,22 +367,14 @@ Type objective_function<Type>::operator() ()
   }  
   if(seasontypeP == 2.0){    // splines
 
-    //  vector<Type> logmvec = log(mvec);
-//     vector<Type> logphiparP(logphiP.size()+1);   // logphiparP only used for seasontypeP == 2
-//     logphiparP(0) = 0.0; // The first logphi is set to 0, the rest are estimated relative to this.
-//     for(int i=1; i<logphiparP.size(); i++){ logphiparP(i) = logphiP(i-1); }
-//     vector<Type> tempP = splinematP.col(0);    
-//     vector<Type> seasonsplineP(tempP.size());
-//     seasonsplineP = splinematP * logphiparP;
-//     vector<Type> tempfineP = splinematfineP.col(0);
-//     vector<Type> seasonsplinefineP(tempfineP.size());
-//     seasonsplinefineP = splinematfineP * logphiparP;   
-
-  
     for(int i=0; i<ns; i++){
       ind2P = CppAD::Integer(seasonindexP(i));
       logmsea(i) += seasonsplineP(ind2P);
     }
+
+
+    /*
+    
     // random walk
         for(int i=1; i<seasonsplineP.size(); i++){
       likval = dnorm(seasonsplineP(i), seasonsplineP(i-1), Type(1), true);
@@ -421,7 +388,7 @@ Type objective_function<Type>::operator() ()
       std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
     }
 
-    /*
+ 
     // add constraint on closing circle    
     likval = dnorm(seasonsplineP(0),seasonsplineP(seasonsplineP.size()-1),Type(1),true);
     ans -= likval;
@@ -429,8 +396,8 @@ Type objective_function<Type>::operator() ()
     //    std::cout << "--  likval: " << likval << "  ans:" << ans << std::endl;
 
     
-    // add constraint on mean 0
-    likval = dnorm(sum(seasonsplineP), Type(0), Type(1e-4), true);
+    // add constraint on mean 1
+    likval = dnorm(sum(expseasonsplineP)/expseasonsplineP.size(), Type(1), Type(1e-4), true);
     ans -= likval;
 
     // what does this do?
