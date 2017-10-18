@@ -286,7 +286,7 @@ sim.spict <- function(input, nobs=100){
         seaFact <- pl$logphiP ## - mean(pl$logphiP)  ## normalise to mean 0
         seasonsplineP <- get.splineP(seaFact, order=inp$splineorderP, dtfine=dt)
         expseasonsplineP <- exp(seasonsplineP)
-        normexpseasonsplineP <- expseasonsplineP - mean(expseasonsplineP) + 1
+        normexpseasonsplineP <- expseasonsplineP/mean(expseasonsplineP)
         nseasonsplineP <- length(normexpseasonsplineP)
         msea <- normexpseasonsplineP[inp$seasonindexP+1]
     }
