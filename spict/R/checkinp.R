@@ -653,9 +653,12 @@ check.inp <- function(inp){
         inp$seasons[inds] <- i
     }
 
+
+
+    
     ####### NEW: September 2017 Tobias
     ## Seasons for production (m)
-    if (!"seasontypeP" %in% names(inp)) inp$seasontypeP <- 1  ## default seasontype = 1
+    if (!"seasontypeP" %in% names(inp)) inp$seasontypeP <- 2  ## default seasontype = 2
     if (!"nseasonsP" %in% names(inp)){      ## default number of seasons = 1
         inp$nseasonsP <- 1
     }
@@ -666,64 +669,8 @@ check.inp <- function(inp){
     }
     if (inp$nseasonsP == 1) inp$seasontypeP <- 0 # seasontypeP = 0 means seasons are disabled.
 
+    if(!'splineorderP' %in% names(inp)) inp$splineorderP <- inp$nseasonsP
 
-    if(FALSE){
-    if(inp$seasontypeP == 1){   ## stepwise approximation of seasonal pattern in m
-        if (!"logphiP" %in% names(inp$ini)) stop("For stepwise approximation of seasonal production, you have to provide 'inp$ini$logphi'")
-        if(length(inp$ini$logphiP) != inp$nseasonsP) stop("For stepwise approximation of seasonal production, 'inp$ini$logphiP' should have the same length as 'inp$nseasonsP'")
-        inp$seasonsP <- rep(0, inp$ns)
-        for (i in 1:inp$nseasonsP){
-             frac <- 1/inp$nseasonsP
-             modtime <- inp$time %% 1
-             inds <- which(modtime>=((i-1)*frac) & modtime<(i*frac))
-             inp$seasonsP[inds] <- i
-        }
-        ## can not be NULL
-        inp$splineorderP <- inp$nseasonsP - 1
-        inp$seasonindexP <- 1/inp$dteuler*(inp$time %% 1)
-        inp$splinematP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=inp$dteuler)
-        inp$splinematfineP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=1/100)
-
-        print(dim(inp$splinematfineP))
-        print(inp$ini$logphiP)
-        print(dim(inp$splinematP))
-        
-        
-    }
-    if(inp$seasontypeP == 2){   ## normalised spline function for seasonal pattern in m
-##         if ("splineorderP" %in% names(inp)){
-##             if (inp$nseasonsP < 4 & inp$splineorderP > 2){
-##                 inp$splineorderP <- 2
-             ##             }
-
-##         } else {
-##             inp$splineorderP <- ifelse(inp$nseasonsP < 4, 2, 3)
-##         }
-         inp$splinematP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=inp$dteuler)
-         inp$splinematfineP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=1/100)
-         inp$seasonindexP <- 1/inp$dteuler*(inp$time %% 1)
-         inp$seasonsP <- rep(0, inp$ns)
-         for (i in 1:inp$nseasonsP){
-             frac <- 1/inp$nseasonsP
-             modtime <- inp$time %% 1
-             inds <- which(modtime>=((i-1)*frac) & modtime<(i*frac))
-             inp$seasonsP[inds] <- i
-         }
-    }
-    if(inp$seasontypeP == 3){   ## sinusoidal function for seasonal pattern in m
-        ## still to be implemented
-    }
-    }
-    
-    
-
-    
-    # ic is the indices of inp$time to which catch observations correspond
-    if (length(inp$dtc) > 0){
-        dtcpred <- min(inp$dtc)
-    } else {
-        inp$splineorderP <- ifelse(inp$nseasonsP < 4, 2, 3)
-    }
     inp$splinematP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=inp$dteuler)
     inp$splinematfineP <- make.splinemat(inp$nseasonsP, inp$splineorderP, dtfine=1/100)
     inp$seasonindexP <- 1/inp$dteuler*(inp$time %% 1)
@@ -736,15 +683,12 @@ check.inp <- function(inp){
     }
     if (!"logphiP" %in% names(inp$ini)) inp$ini$logphiP <- rep(0, inp$nseasonsP)
 
+    ######
+
+
     
-    # ic is the indices of inp$time to which catch observations correspond
-    #if (length(inp$dtc) > 0){
-    #    dtcpred <- min(inp$dtc)
-    #} else {
-    #    dtcpred <- 1
-    #}
-    dtcpred <- inp$dtpredc
-    
+    ## ic is the indices of inp$time to which catch observations correspond to
+    dtcpred <- inp$dtpredc        
     inp$timeCpred <- unique(c(inp$timeC, (seq(tail(inp$timeC,1), inp$timepredc, by=tail(inp$dtc,1))), inp$timepredc))
     inp$nobsCp <- length(inp$timeCpred)
     if( inp$nobsCp > inp$nobsC )  inp$dtcp <- c(inp$dtc, rep(tail(inp$dtc,1), inp$nobsCp-inp$nobsC-1),dtcpred) else inp$dtcp <- inp$dtc

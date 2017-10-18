@@ -323,7 +323,6 @@ get.spline <- function(logphi, order, dtfine=1/100){
     d <- make.splinemat(nseasons, order, dtfine)
     spline <- as.vector(d %*% logphipar)
     spline <- c(spline, spline[1])
-    print(length(spline))
     return(spline)
 }
 

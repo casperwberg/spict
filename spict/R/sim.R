@@ -272,7 +272,26 @@ sim.spict <- function(input, nobs=100){
     sde <- exp(pl$logsde)
     lambda <- exp(pl$loglambda)
     omega <- inp$omega
-    
+
+    ###### NEW: September 2017 Tobias
+    ## seasonal m for seasonal production
+    ## make inp$ir in check.inp dependent on logr and seasonal r
+    ## making m seasonal means making r and K seasonal, but for estimation of Bmsyd,
+    ## K is used which will not have a seasonal effect
+    ## logm and mbase = without seasonal pattern -> for reference levels
+    ## mean of msea (log scale) should be 0, so that the estimation of the reference levels is
+    ## not biased
+    msea <- rep(1, nt)
+    if(inp$seasontypeP == 2){
+        seaFact <- pl$logphiP ## - mean(pl$logphiP)  ## normalise to mean 0
+        seasonsplineP <- get.splineP(seaFact, order=inp$splineorderP, dtfine=dt)
+        expseasonsplineP <- exp(seasonsplineP)
+        normexpseasonsplineP <- expseasonsplineP - mean(expseasonsplineP) + 1
+        nseasonsplineP <- length(normexpseasonsplineP)
+        msea <- normexpseasonsplineP[inp$seasonindexP+1]
+    }
+    m <- mbase * msea        
+
     # B[t] is biomass at the beginning of the time interval starting at time t
     # I[t] is an index of biomass (e.g. CPUE) at time t
     # P[t] is the accumulated biomass production over the interval starting at time t
@@ -340,47 +359,6 @@ sim.spict <- function(input, nobs=100){
         #if (inp$timevaryinggrowth){
         #    mre <- exp(logmre) # To be used in mres below
                                         #}
-
-
-
-        ###### NEW: September 2017 Tobias
-        ## seasonal m for seasonal production
-        ## make inp$ir in check.inp dependent on logr and seasonal r
-        ## making m seasonal means making r and K seasonal, but for estimation of Bmsyd,
-        ## K is used which will not have a seasonal effect
-        ## logm and mbase = without seasonal pattern -> for reference levels
-        ## mean of msea (log scale) should be 0, so that the estimation of the reference levels is
-        ## not biased
-
-        if(inp$seasontypeP == 0){
-            m <- mbase
-        }
-        if(inp$seasontypeP == 1){
-            seaFact <- exp(pl$logphiP)
-            seaFact <- seaFact - mean(seaFact) + 1   ## normalise to mean 1 (if time series stops in middle of year, can be different from 1)
-            msea <- seaFact[inp$seasonsP]
-            print(mean(msea))
-            m <- mbase * msea
-            ## inp$ir <- seq(length(msea))   ## hack! and will intervene with timevaryinggrowth!
-        }
-        if(inp$seasontypeP == 2){
-            seaFact <- pl$logphiP ## - mean(pl$logphiP)  ## normalise to mean 0
-            seasonsplineP <- get.splineP(seaFact, order=inp$splineorderP, dtfine=dt)
-            expseasonsplineP <- exp(seasonsplineP)
-            print(paste0("expseasonsplineP:  ",expseasonsplineP))
-            normexpseasonsplineP <- expseasonsplineP - mean(expseasonsplineP) + 1
-            nseasonsplineP <- length(normexpseasonsplineP)
-            msea <- normexpseasonsplineP[inp$seasonindexP+1]
-            ## print(mean(msea))
-            m <- mbase * msea
-            print(paste0("mbase:  ",mbase))            
-            ## inp$ir <- seq(length(msea))   ## hack! and will intervene with timevaryinggrowth!            
-        }
-        if(inp$seasontypeP == 3){
-            ## still to be implemented
-            m <- mbase
-        }
-        
 
         # - Biomass -
         B <- numeric(nt)
