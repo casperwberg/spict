@@ -1834,7 +1834,7 @@ plotspict.seasonP <- function(rep, stamp=get.version()){
 
         }
         if (rep$inp$seasontypeP==2){
-            seasonsplineestP <- get.spline(logphiP[, 2], order=rep$inp$splineorderP, dtfine=rep$inp$dteuler)
+            seasonsplineestP <- get.splineP(logphiP[, 2], order=rep$inp$splineorderP, dtfine=rep$inp$dteuler)
             test <- seq(0, 1, length=length(seasonsplineestP))
             ## yest <- exp(meanlogB + seasonsplineestP)
             yest <- meanlogB + seasonsplineestP            
@@ -1862,11 +1862,12 @@ plotspict.seasonP <- function(rep, stamp=get.version()){
                 ylim <- range(c(ylim,ytrue))
             }
             if (rep$inp$true$seasontypeP==2){
-                seasonsplinetrueP <- get.spline(rep$inp$true$logphiP, order=rep$inp$true$splineorderP,
+                seasonsplinetrueP <- get.splineP(rep$inp$true$logphiP, order=rep$inp$true$splineorderP,
                                                dtfine=rep$inp$true$dteuler)
                 ttrue <- seq(0, 1, length=length(seasonsplinetrueP))
-                ## ytrue <- exp(seasonsplinetrueP) - mean(exp(seasonsplinetrueP)) + 1
-                ytrue <- seasonsplinetrueP - mean(seasonsplinetrueP)
+                ytemp <- exp(seasonsplinetrueP) - mean(exp(seasonsplinetrueP)) + 1
+                ytrue <- log(ytemp)
+                ## ytrue <- seasonsplinetrueP - mean(seasonsplinetrueP)
                 ylim <- range(c(ylim, ytrue))
             
             }

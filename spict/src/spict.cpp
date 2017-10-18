@@ -343,6 +343,10 @@ Type objective_function<Type>::operator() ()
 
     // constraint on closing circle
     // ans -= dnorm(seasonsplineP(0), seasonsplineP(seasonsplineP.size()-1), Type(1), true);
+
+    if(dbg>0){
+      std::cout << "-- seasonsplineP: " << seasonsplineP << ans << std::endl;
+    }    
   }
 
 
