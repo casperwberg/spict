@@ -339,7 +339,7 @@ Type objective_function<Type>::operator() ()
     }
     
     // add constraint on mean 1
-    ans -= dnorm(sum(expseasonsplineP)/expseasonsplineP.size(), Type(1), Type(1), true);
+    ans -= dnorm(sum(expseasonsplineP)/expseasonsplineP.size(), Type(1), Type(1e-4), true);
 
     // constraint on closing circle
     // ans -= dnorm(seasonsplineP(0), seasonsplineP(seasonsplineP.size()-1), Type(1), true);
@@ -364,6 +364,18 @@ Type objective_function<Type>::operator() ()
     mvec(i) = exp(logmc(i) + logmre(i) + logmsea(i));      //mvec(i) = exp(logm(0) + mu*logmcov(i) + logmre(i));
   }
 
+
+  // account for seasonal varying m which should not affect reference points
+  //probably does not work for MSYregime!
+  /*
+  vector<Type> meanm(nm);
+  vector<Type> indsea;
+  for(int i=0; i<nm; i++){
+    // which elements in mvec belong to different MSYregimes
+    indsea = MSYregime == i;
+    meanm(i) = (mvec(indsea)/m(i)).sum() / indsea.size();
+  }
+  */
 
   // Reference points  
   Type p = n - 1.0;
@@ -1111,7 +1123,7 @@ Type objective_function<Type>::operator() ()
   ADREPORT(seasonsplinefine);
   // if(seasontypeP == 2.0)
   ADREPORT(seasonsplinefineP);
-  // PREDICTIONS
+ // PREDICTIONS
   ADREPORT(Cp);
   ADREPORT(logIp);
   ADREPORT(logCp);

@@ -508,6 +508,10 @@ sumspict.fixedpars <- function(rep, ndigits=8){
     if(rep$inp$seasontype != 2){
         nms <- nms[-match(c('logsdu', 'loglambda'), nms)]
     }
+    # Are seasonal production spline used? if not remove
+    if(rep$inp$seasontypeP != 2){
+        nms <- nms[-match(c('logphiP'), nms)]
+    }    
     # Is RW effort model used?
     if (rep$inp$effortmodel == 'RW'){
         nms <- nms[-match(c('logeta', 'logdelta'), nms)]
